@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Finance Tracker</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #6b73ff, #000dff);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .container::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.1);
+            z-index: -1;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2d3748;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+
+        .section {
+            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            background: #f7fafc;
+            box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .section h2 {
+            color: #2d3748;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+
+        .section label {
+            display: block;
+            margin-bottom: 5px;
+            color: #4a5568;
+        }
+
+        .section input, .section select, .section button {
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #cbd5e0;
+            width: 100%;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+
+        .section button {
+            background-color: #3182ce;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        .section button:hover {
+            background-color: #2b6cb0;
+            transform: scale(1.02);
+        }
+
+        .expense-list ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .expense-list li {
+            padding: 12px;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 8px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .expense-list li:nth-child(odd) {
+            background-color: #f7fafc;
+        }
+
+        .charts-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #expenseChart {
+            width: 100%;
+            max-width: 800px;
+            height: 400px;
+            border-radius: 10px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Personal Finance Tracker</h1>
+        
+        <!-- Budget Section -->
+        <div class="section">
+            <h2>Set Monthly Budget</h2>
+            <label for="budget">Monthly Budget: </label>
+            <input type="number" id="budget" placeholder="Enter budget">
+            <button onclick="setBudget()">Set Budget</button>
+            <p id="remaining-budget">Remaining Budget: $0</p>
+        </div>
+        
+        <!-- Add Expense Section -->
+        <div class="section">
+            <h2>Add Expense</h2>
+            <label for="expense-name">Expense Description: </label>
+            <input type="text" id="expense-name" placeholder="Enter description">
+            <label for="amount">Amount: </label>
+            <input type="number" id="amount" placeholder="Enter amount">
+            <label for="category">Category: </label>
+            <select id="category">
+                <option value="food">Food</option>
+                <option value="rent">Rent</option>
+                <option value="transport">Transport</option>
+                <option value="entertainment">Entertainment</option>
+            </select>
+            <button onclick="addExpense()">Add Expense</button>
+        </div>
+        
+        <!-- Expense List -->
+        <div class="section expense-list">
+            <h2>Expense History</h2>
+            <ul id="expense-list"></ul>
+        </div>
+        
+        <!-- Charts Section -->
+        <div class="charts-section">
+            <h2>Spending Overview</h2>
+            <canvas id="expenseChart"></canvas>
+        </div>
+    </div>
+    
+    <script>
+        // JavaScript code for Personal Finance Tracker
+
+        let budget = 0;
+        let expenses = [];
+        let totalExpense = 0;
+
+        // Create Chart instance
+        const ctx = document.getElementById('expenseChart').getContext('2d');
+        const expenseChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ['Food', 'Rent', 'Transport', 'Entertainment'],
+                datasets: [{
+                    label: 'Expenses by Category',
+                    data: [0, 0, 0, 0],
+                    backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe', '#ffce56'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            font: {
+                                size: 14
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(tooltipItem) {
+                                return `${tooltipItem.label}: $${tooltipItem.raw.toFixed(2)}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Function to set budget
+        function setBudget() {
+            budget = parseFloat(document.getElementById('budget').value);
+            updateRemainingBudget();
+        }
+
+        // Function to update remaining budget
+        function updateRemainingBudget() {
+            const remainingBudget = budget - totalExpense;
+            document.getElementById('remaining-budget').innerText = `Remaining Budget: $${remainingBudget.toFixed(2)}`;
+        }
+
+        // Function to add an expense
+        function addExpense() {
+            const expenseName = document.getElementById('expense-name').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const category = document.getElementById('category').value;
+            
+            if (expenseName && amount && category) {
+                expenses.push({ name: expenseName, amount, category });
+                totalExpense += amount;
+                updateRemainingBudget();
+                renderExpenses();
+                updateChart();
+            }
+        }
+
+        // Function to render expense list
+        function renderExpenses() {
+            const expenseList = document.getElementById('expense-list');
+            expenseList.innerHTML = '';
+
+            expenses.forEach((expense) => {
+                const li = document.createElement('li');
+                li.innerHTML = `${expense.name} - $${expense.amount.toFixed(2)} <span>(${expense.category})</span>`;
+                expenseList.appendChild(li);
+            });
+        }
+
+        // Function to update chart
+        function updateChart() {
+            const categories = ['food', 'rent', 'transport', 'entertainment'];
+            const data = categories.map(category => {
+                return expenses
+                    .filter(expense => expense.category === category)
+                    .reduce((total, current) => total + current.amount, 0);
+            });
+
+            expenseChart.data.datasets[0].data = data;
+            expenseChart.update();
+        }
+    </script>
+</body>
+</html>
